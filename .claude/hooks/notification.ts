@@ -1,0 +1,91 @@
+#!/usr/bin/env tsx
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
+import { exec } from "child_process";
+import { platform } from "os";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Detect if running from global installation
+const isGlobalInstall = __dirname.includes('.claude/hooks');
+const logsDir = isGlobalInstall 
+  ? join(process.env.HOME || process.cwd(), '.claude', 'logs')
+  : join(__dirname, "../../logs");
+  
+if (!existsSync(logsDir)) {
+  mkdirSync(logsDir, { recursive: true });
+}
+
+let input = "";
+process.stdin.setEncoding("utf8");
+process.stdin.on("readable", () => {
+  let chunk;
+  while ((chunk = process.stdin.read()) !== null) {
+    input += chunk;
+  }
+});
+
+process.stdin.on("end", async () => {
+  try {
+    const data = JSON.parse(input);
+
+    // Log the notification
+    const logFile = join(logsDir, "notifications.json");
+    let logs = [];
+    if (existsSync(logFile)) {
+      try {
+        logs = JSON.parse(readFileSync(logFile, "utf8"));
+      } catch (e) {
+        logs = [];
+      }
+    }
+
+    logs.push({
+      timestamp: new Date().toISOString(),
+      ...data,
+    });
+
+    writeFileSync(logFile, JSON.stringify(logs, null, 2));
+
+    // Play notification sound if --notify flag is present
+    if (process.argv.includes("--notify")) {
+      const soundFile = isGlobalInstall
+        ? join(process.env.HOME || process.cwd(), '.claude', 'on-agent-need-attention.wav')
+        : join(__dirname, "../../on-agent-need-attention.wav");
+
+      if (existsSync(soundFile)) {
+        let cmd: string;
+        let os_platform = platform();
+        if (os_platform === "darwin") {
+          cmd = `afplay "${soundFile}"`;
+          // TODO: this is still untested on win32 and linux, only have a mac available atm
+        } else if (os_platform === "win32") {
+          cmd = `powershell -c "(New-Object Media.SoundPlayer '${soundFile}').PlaySync()"`;
+        } else {
+          // Linux - try multiple players
+          cmd = `aplay "${soundFile}" 2>/dev/null || paplay "${soundFile}" 2>/dev/null || play "${soundFile}" 2>/dev/null`;
+        }
+
+        exec(cmd, (err) => {
+          if (err) {
+            console.error("Error playing sound:", err.message);
+          }
+          process.exit(0);
+        });
+      } else {
+        console.error(`Sound file not found: ${soundFile}`);
+        console.error(
+          "Please ensure on-agent-need-attention.wav exists in the repository root",
+        );
+        process.exit(0);
+      }
+    } else {
+      process.exit(0);
+    }
+  } catch (error) {
+    console.error("Error processing notification:", error);
+    process.exit(2);
+  }
+});

@@ -1,0 +1,30 @@
+{
+  "name": "claude-code-hooks",
+  "version": "1.0.0",
+  "description": "TypeScript hooks for Claude Code with sound notifications",
+  "type": "module",
+  "scripts": {
+    "notification": "tsx .claude/hooks/notification.ts",
+    "stop": "tsx .claude/hooks/stop.ts",
+    "subagent-stop": "tsx .claude/hooks/subagent_stop.ts"
+  },
+  "bin": {
+    "claude-notification-hook": ".claude/hooks/notification.ts",
+    "claude-stop-hook": ".claude/hooks/stop.ts",
+    "claude-subagent-stop-hook": ".claude/hooks/subagent_stop.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.12",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  },
+  "keywords": [
+    "claude",
+    "claude code",
+    "hooks",
+    "notifications",
+    "sound notifications"
+  ],
+  "author": "Pascal Poredda <pascal@poredda.digital>",
+  "license": "MIT"
+}
