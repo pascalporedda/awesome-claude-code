@@ -23,9 +23,9 @@ check_dependencies() {
         missing_deps+=("Node.js (for npx)")
     fi
     
-    # Check for jq (only if we need to merge existing settings)
-    if [ -f "$HOME/.claude/settings.json" ] && ! command -v jq &> /dev/null; then
-        missing_deps+=("jq")
+    # Check for Node.js (required for JSON merging)
+    if ! command -v node &> /dev/null; then
+        missing_deps+=("Node.js")
     fi
     
     if [ ${#missing_deps[@]} -gt 0 ]; then
@@ -37,18 +37,17 @@ check_dependencies() {
         echo "Please install the missing dependencies:"
         echo
         echo "macOS:"
-        echo "  brew install node jq"
+        echo "  brew install node"
         echo
         echo "Ubuntu/Debian:"
         echo "  sudo apt-get update"
-        echo "  sudo apt-get install nodejs npm jq"
+        echo "  sudo apt-get install nodejs npm"
         echo
         echo "Windows (using Chocolatey):"
-        echo "  choco install nodejs jq"
+        echo "  choco install nodejs"
         echo
         echo "Or install manually from:"
         echo "  - Node.js: https://nodejs.org/"
-        echo "  - jq: https://jqlang.github.io/jq/"
         echo
         exit 1
     fi
@@ -59,37 +58,8 @@ merge_settings_fallback() {
     local existing_file="$1"
     local output_file="$2"
     
-    # Simple Python script to merge JSON
-    python3 -c "
-import json
-import sys
-
-try:
-    with open('$existing_file', 'r') as f:
-        existing = json.load(f)
-except:
-    existing = {}
-
-hooks = {
-    'Notification': {
-        'matcher': '*',
-        'command': ['npx', 'tsx', '~/.claude/hooks/notification.ts', '--notify']
-    },
-    'Stop': {
-        'matcher': '*',
-        'command': ['npx', 'tsx', '~/.claude/hooks/stop.ts', '--chat']
-    },
-    'SubagentStop': {
-        'matcher': '*',
-        'command': ['npx', 'tsx', '~/.claude/hooks/subagent_stop.ts']
-    }
-}
-
-existing['hooks'] = hooks
-
-with open('$output_file', 'w') as f:
-    json.dump(existing, f, indent=2)
-"
+    # Use dedicated Node.js script
+    node "$(dirname "$0")/scripts/merge-settings.js" "$existing_file" "$output_file"
 }
 
 echo -e "${YELLOW}Checking dependencies...${NC}"
@@ -124,53 +94,10 @@ TEMP_SETTINGS=$(mktemp)
 
 if [ -f "$GLOBAL_SETTINGS" ]; then
     echo -e "${YELLOW}Merging with existing settings...${NC}"
-    
-    # Try jq first, fall back to Python if jq is not available
-    if command -v jq &> /dev/null; then
-        jq -s '.[0] * {
-            hooks: {
-                Notification: {
-                    matcher: "*",
-                    command: ["npx", "tsx", "~/.claude/hooks/notification.ts", "--notify"]
-                },
-                Stop: {
-                    matcher: "*",
-                    command: ["npx", "tsx", "~/.claude/hooks/stop.ts", "--chat"]
-                },
-                SubagentStop: {
-                    matcher: "*",
-                    command: ["npx", "tsx", "~/.claude/hooks/subagent_stop.ts"]
-                }
-            }
-        }' "$GLOBAL_SETTINGS" > "$TEMP_SETTINGS"
-    elif command -v python3 &> /dev/null; then
-        echo -e "${YELLOW}jq not found, using Python fallback...${NC}"
-        merge_settings_fallback "$GLOBAL_SETTINGS" "$TEMP_SETTINGS"
-    else
-        echo -e "${RED}Error: Neither jq nor Python3 found. Cannot merge settings.${NC}"
-        echo "Please install jq or Python3, or remove the existing settings file:"
-        echo "  rm $GLOBAL_SETTINGS"
-        exit 1
-    fi
+    merge_settings_fallback "$GLOBAL_SETTINGS" "$TEMP_SETTINGS"
 else
-    cat > "$TEMP_SETTINGS" <<EOF
-{
-  "hooks": {
-    "Notification": {
-      "matcher": "*",
-      "command": ["npx", "tsx", "~/.claude/hooks/notification.ts", "--notify"]
-    },
-    "Stop": {
-      "matcher": "*",
-      "command": ["npx", "tsx", "~/.claude/hooks/stop.ts", "--chat"]
-    },
-    "SubagentStop": {
-      "matcher": "*",
-      "command": ["npx", "tsx", "~/.claude/hooks/subagent_stop.ts"]
-    }
-  }
-}
-EOF
+    echo -e "${YELLOW}Creating new global settings...${NC}"
+    merge_settings_fallback "/dev/null" "$TEMP_SETTINGS"
 fi
 
 mv "$TEMP_SETTINGS" "$GLOBAL_SETTINGS"

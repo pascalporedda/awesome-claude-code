@@ -40,7 +40,7 @@ The global installer will:
 
 - Copy hooks to `~/.claude/hooks/`
 - Copy sound files to `~/.claude/`
-- Update `~/.claude/settings.json` with hook configurations
+- Update `~/.claude/settings.json` with hook configurations (preserves existing permissions)
 - Create a logs directory at `~/.claude/logs/`
 
 ## How It Works
@@ -70,21 +70,46 @@ Hooks are written in TypeScript and executed directly using `npx tsx` - no build
 
 The `.claude/settings.json` configures three hooks:
 
+> **Note**: The installer only updates the `hooks` configuration and preserves any existing `permissions` you may have configured.
+
 ```json
 {
   "hooks": {
-    "Notification": {
-      "matcher": "*",
-      "command": ["npx", "tsx", ".claude/hooks/notification.ts", "--notify"]
-    },
-    "Stop": {
-      "matcher": "*",
-      "command": ["npx", "tsx", ".claude/hooks/stop.ts", "--chat"]
-    },
-    "SubagentStop": {
-      "matcher": "*",
-      "command": ["npx", "tsx", ".claude/hooks/subagent_stop.ts"]
-    }
+    "PreToolUse": [],
+    "PostToolUse": [],
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx tsx .claude/hooks/notification.ts --notify"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx tsx .claude/hooks/stop.ts --chat"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx tsx .claude/hooks/subagent_stop.ts"
+          }
+        ]
+      }
+    ]
   }
 }
 ```
@@ -123,38 +148,34 @@ echo '{"type":"Notification","data":{}}' | npx tsx .claude/hooks/notification.ts
 - **TypeScript execution via `tsx`** - Installed automatically via npx
 - **Sound files**: `on-agent-need-attention.wav` and `on-agent-complete.wav`
 
-### Optional Dependencies (for global installation)
+### Dependencies
 
-- **jq** - Required only if you have existing global settings to merge
-- **Python3** - Alternative fallback for JSON merging if jq is not available
+All dependencies are already covered by the core requirements above - no additional dependencies needed for global installation.
 
 ### Installation Commands
 
 **macOS** (using Homebrew):
 
 ```bash
-brew install node jq
+brew install node
 ```
 
 **Ubuntu/Debian**:
 
 ```bash
 sudo apt-get update
-sudo apt-get install nodejs npm jq
+sudo apt-get install nodejs npm
 ```
 
 **Windows** (using Chocolatey):
 
 ```bash
-choco install nodejs jq
+choco install nodejs
 ```
 
 **Manual installation**:
 
 - Node.js: https://nodejs.org/
-- jq: https://jqlang.github.io/jq/
-
-> **Note**: If you're doing a fresh global installation (no existing `~/.claude/settings.json`), you only need Node.js. The jq/Python3 requirement is only for merging with existing settings.
 
 **Make sure to have Claude installed globally.**
 
@@ -193,9 +214,10 @@ Uses built-in `afplay`, no additional software needed.
 2. **Permission errors**: Ensure hooks have execute permissions
 3. **Linux audio issues**: Try installing one of the supported audio players
 4. **Logs not appearing**: Check file permissions on the logs directory
-5. **Installation fails with "jq not found"**: Install jq or Python3, or remove existing `~/.claude/settings.json`
+5. **Installation fails with Node.js errors**: Ensure Node.js is installed and available in your PATH
 6. **Installation fails with "npx not found"**: Install Node.js first
 7. **Hooks not triggering**: Restart Claude Code after global installation
+8. **Permission denied errors**: Ensure you have proper permissions configured in your `~/.claude/settings.json`
 
 ## Attribution & Credits
 
