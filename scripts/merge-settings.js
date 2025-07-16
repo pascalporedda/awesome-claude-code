@@ -6,12 +6,13 @@ import path from 'path';
 
 // Get command line arguments
 const args = process.argv.slice(2);
-if (args.length !== 2) {
-    console.error('Usage: node merge-settings.js <existing_file> <output_file>');
+if (args.length < 2 || args.length > 3) {
+    console.error('Usage: node merge-settings.js <existing_file> <output_file> [speech]');
     process.exit(1);
 }
 
-const [existingFile, outputFile] = args;
+const [existingFile, outputFile, mode] = args;
+const useSpeak = mode === 'speech';
 const home = os.homedir();
 
 let existing = {};
@@ -27,6 +28,8 @@ try {
     existing = {};
 }
 
+const speakFlag = useSpeak ? ' --speak' : '';
+
 const new_hooks = {
     'PreToolUse': [],
     'PostToolUse': [],
@@ -36,7 +39,7 @@ const new_hooks = {
             'hooks': [
                 {
                     'type': 'command',
-                    'command': `npx tsx ${home}/.claude/hooks/notification.ts --notify`
+                    'command': `npx tsx ${home}/.claude/hooks/notification.ts --notify${speakFlag}`
                 }
             ]
         }
@@ -47,7 +50,7 @@ const new_hooks = {
             'hooks': [
                 {
                     'type': 'command',
-                    'command': `npx tsx ${home}/.claude/hooks/stop.ts --chat`
+                    'command': `npx tsx ${home}/.claude/hooks/stop.ts --chat${speakFlag}`
                 }
             ]
         }
@@ -58,7 +61,7 @@ const new_hooks = {
             'hooks': [
                 {
                     'type': 'command',
-                    'command': `npx tsx ${home}/.claude/hooks/subagent_stop.ts`
+                    'command': `npx tsx ${home}/.claude/hooks/subagent_stop.ts${speakFlag}`
                 }
             ]
         }

@@ -57,13 +57,36 @@ check_dependencies() {
 merge_settings_fallback() {
     local existing_file="$1"
     local output_file="$2"
+    local mode="$3"
     
     # Use dedicated Node.js script
-    node "$(dirname "$0")/scripts/merge-settings.js" "$existing_file" "$output_file"
+    if [ -n "$mode" ]; then
+        node "$(dirname "$0")/scripts/merge-settings.js" "$existing_file" "$output_file" "$mode"
+    else
+        node "$(dirname "$0")/scripts/merge-settings.js" "$existing_file" "$output_file"
+    fi
 }
 
 echo -e "${YELLOW}Checking dependencies...${NC}"
 check_dependencies
+
+# Ask user preference for notification type
+echo
+echo -e "${YELLOW}Select notification type:${NC}"
+echo "1) Sound notifications (default)"
+echo "2) Speech notifications (macOS only)"
+echo
+read -p "Enter your choice (1 or 2): " notification_choice
+
+# Default to sound if no valid choice
+if [ "$notification_choice" != "2" ]; then
+    notification_choice="1"
+    NOTIFICATION_MODE=""
+    echo -e "${GREEN}Using sound notifications${NC}"
+else
+    NOTIFICATION_MODE="speech"
+    echo -e "${GREEN}Using speech notifications${NC}"
+fi
 
 CLAUDE_CONFIG_DIR="$HOME/.claude"
 if [ ! -d "$CLAUDE_CONFIG_DIR" ]; then
@@ -94,10 +117,10 @@ TEMP_SETTINGS=$(mktemp)
 
 if [ -f "$GLOBAL_SETTINGS" ]; then
     echo -e "${YELLOW}Merging with existing settings...${NC}"
-    merge_settings_fallback "$GLOBAL_SETTINGS" "$TEMP_SETTINGS"
+    merge_settings_fallback "$GLOBAL_SETTINGS" "$TEMP_SETTINGS" "$NOTIFICATION_MODE"
 else
     echo -e "${YELLOW}Creating new global settings...${NC}"
-    merge_settings_fallback "/dev/null" "$TEMP_SETTINGS"
+    merge_settings_fallback "/dev/null" "$TEMP_SETTINGS" "$NOTIFICATION_MODE"
 fi
 
 mv "$TEMP_SETTINGS" "$GLOBAL_SETTINGS"
@@ -112,9 +135,16 @@ echo
 echo -e "${GREEN}✓ Global installation complete!${NC}"
 echo
 echo "The following hooks are now available globally:"
-echo "  - Notification hook: Plays sound when Claude needs attention"
-echo "  - Stop hook: Plays sound when Claude completes a task"
-echo "  - SubagentStop hook: Plays sound when subagent completes"
+if [ "$NOTIFICATION_MODE" = "speech" ]; then
+    echo "  - Notification hook: Says 'Your agent needs attention' when Claude needs attention"
+    echo "  - Stop hook: Says 'Your agent has finished' when Claude completes a task"
+    echo "  - SubagentStop hook: Says 'Your subagent has finished' when subagent completes"
+    echo "  - ${YELLOW}Note: Speech notifications are only available on macOS${NC}"
+else
+    echo "  - Notification hook: Plays sound when Claude needs attention"
+    echo "  - Stop hook: Plays sound when Claude completes a task"
+    echo "  - SubagentStop hook: Plays sound when subagent completes"
+fi
 echo
 echo "Hooks will log to: $GLOBAL_LOGS_DIR"
 echo

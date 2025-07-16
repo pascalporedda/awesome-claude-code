@@ -50,60 +50,80 @@ process.stdin.on('end', async () => {
     
     writeFileSync(logFile, JSON.stringify(logs, null, 2));
     
-    // Play completion sound
-    const soundFile = isGlobalInstall
-      ? join(process.env.HOME || process.cwd(), '.claude', 'on-agent-complete.wav')
-      : join(__dirname, '../../on-agent-complete.wav');
+    // Play completion sound or speak notification
+    const os_platform = platform();
     
-    // Check if sound file exists
-    if (existsSync(soundFile)) {
-      // Determine the command based on the platform
-      let cmd: string;
-      if (platform() === 'darwin') {
-        cmd = `afplay "${soundFile}"`;
-      } else if (platform() === 'win32') {
-        cmd = `powershell -c "(New-Object Media.SoundPlayer '${soundFile}').PlaySync()"`;
-      } else {
-        // Linux - try multiple players
-        cmd = `aplay "${soundFile}" 2>/dev/null || paplay "${soundFile}" 2>/dev/null || play "${soundFile}" 2>/dev/null`;
+    // Define the callback for after notification
+    const afterNotification = () => {
+      // If --chat flag is present, process the transcript
+      if (process.argv.includes('--chat') && data.transcript_path) {
+        try {
+          const transcriptPath = data.transcript_path;
+          if (existsSync(transcriptPath)) {
+            const transcriptContent = readFileSync(transcriptPath, 'utf8');
+            const lines = transcriptContent.split('\n').filter(line => line.trim());
+            const chatData = [];
+            
+            for (const line of lines) {
+              try {
+                chatData.push(JSON.parse(line));
+              } catch (e) {
+                // Skip invalid lines
+              }
+            }
+            
+            const chatLogFile = join(logsDir, 'chat.json');
+            writeFileSync(chatLogFile, JSON.stringify(chatData, null, 2));
+          }
+        } catch (e) {
+          console.error('Error processing transcript:', e);
+        }
       }
+      
+      process.exit(0);
+    };
+    
+    // Check if --speak flag is present and on macOS
+    if (process.argv.includes('--speak') && os_platform === 'darwin') {
+      const message = "Your agent has finished";
+      const cmd = `say "${message}"`;
       
       exec(cmd, (err) => {
         if (err) {
-          console.error('Error playing sound:', err.message);
+          console.error('Error speaking notification:', err.message);
         }
-        
-        // If --chat flag is present, process the transcript
-        if (process.argv.includes('--chat') && data.transcript_path) {
-          try {
-            const transcriptPath = data.transcript_path;
-            if (existsSync(transcriptPath)) {
-              const transcriptContent = readFileSync(transcriptPath, 'utf8');
-              const lines = transcriptContent.split('\n').filter(line => line.trim());
-              const chatData = [];
-              
-              for (const line of lines) {
-                try {
-                  chatData.push(JSON.parse(line));
-                } catch (e) {
-                  // Skip invalid lines
-                }
-              }
-              
-              const chatLogFile = join(logsDir, 'chat.json');
-              writeFileSync(chatLogFile, JSON.stringify(chatData, null, 2));
-            }
-          } catch (e) {
-            console.error('Error processing transcript:', e);
-          }
-        }
-        
-        process.exit(0);
+        afterNotification();
       });
     } else {
-      console.error(`Sound file not found: ${soundFile}`);
-      console.error('Please ensure on-agent-complete.wav exists in the repository root');
-      process.exit(0);
+      // Default behavior: play sound file
+      const soundFile = isGlobalInstall
+        ? join(process.env.HOME || process.cwd(), '.claude', 'on-agent-complete.wav')
+        : join(__dirname, '../../on-agent-complete.wav');
+      
+      // Check if sound file exists
+      if (existsSync(soundFile)) {
+        // Determine the command based on the platform
+        let cmd: string;
+        if (os_platform === 'darwin') {
+          cmd = `afplay "${soundFile}"`;
+        } else if (os_platform === 'win32') {
+          cmd = `powershell -c "(New-Object Media.SoundPlayer '${soundFile}').PlaySync()"`;
+        } else {
+          // Linux - try multiple players
+          cmd = `aplay "${soundFile}" 2>/dev/null || paplay "${soundFile}" 2>/dev/null || play "${soundFile}" 2>/dev/null`;
+        }
+        
+        exec(cmd, (err) => {
+          if (err) {
+            console.error('Error playing sound:', err.message);
+          }
+          afterNotification();
+        });
+      } else {
+        console.error(`Sound file not found: ${soundFile}`);
+        console.error('Please ensure on-agent-complete.wav exists in the repository root');
+        afterNotification();
+      }
     }
   } catch (error) {
     console.error('Error processing stop event:', error);

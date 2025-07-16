@@ -51,35 +51,50 @@ process.stdin.on("end", async () => {
 
     // Play notification sound if --notify flag is present
     if (process.argv.includes("--notify")) {
-      const soundFile = isGlobalInstall
-        ? join(process.env.HOME || process.cwd(), '.claude', 'on-agent-need-attention.wav')
-        : join(__dirname, "../../on-agent-need-attention.wav");
-
-      if (existsSync(soundFile)) {
-        let cmd: string;
-        let os_platform = platform();
-        if (os_platform === "darwin") {
-          cmd = `afplay "${soundFile}"`;
-          // TODO: this is still untested on win32 and linux, only have a mac available atm
-        } else if (os_platform === "win32") {
-          cmd = `powershell -c "(New-Object Media.SoundPlayer '${soundFile}').PlaySync()"`;
-        } else {
-          // Linux - try multiple players
-          cmd = `aplay "${soundFile}" 2>/dev/null || paplay "${soundFile}" 2>/dev/null || play "${soundFile}" 2>/dev/null`;
-        }
-
+      let os_platform = platform();
+      
+      // Check if --speak flag is present and on macOS
+      if (process.argv.includes("--speak") && os_platform === "darwin") {
+        const message = "Your agent needs attention";
+        const cmd = `say "${message}"`;
+        
         exec(cmd, (err) => {
           if (err) {
-            console.error("Error playing sound:", err.message);
+            console.error("Error speaking notification:", err.message);
           }
           process.exit(0);
         });
       } else {
-        console.error(`Sound file not found: ${soundFile}`);
-        console.error(
-          "Please ensure on-agent-need-attention.wav exists in the repository root",
-        );
-        process.exit(0);
+        // Default behavior: play sound file
+        const soundFile = isGlobalInstall
+          ? join(process.env.HOME || process.cwd(), '.claude', 'on-agent-need-attention.wav')
+          : join(__dirname, "../../on-agent-need-attention.wav");
+
+        if (existsSync(soundFile)) {
+          let cmd: string;
+          if (os_platform === "darwin") {
+            cmd = `afplay "${soundFile}"`;
+            // TODO: this is still untested on win32 and linux, only have a mac available atm
+          } else if (os_platform === "win32") {
+            cmd = `powershell -c "(New-Object Media.SoundPlayer '${soundFile}').PlaySync()"`;
+          } else {
+            // Linux - try multiple players
+            cmd = `aplay "${soundFile}" 2>/dev/null || paplay "${soundFile}" 2>/dev/null || play "${soundFile}" 2>/dev/null`;
+          }
+
+          exec(cmd, (err) => {
+            if (err) {
+              console.error("Error playing sound:", err.message);
+            }
+            process.exit(0);
+          });
+        } else {
+          console.error(`Sound file not found: ${soundFile}`);
+          console.error(
+            "Please ensure on-agent-need-attention.wav exists in the repository root",
+          );
+          process.exit(0);
+        }
       }
     } else {
       process.exit(0);
