@@ -2,6 +2,8 @@
 
 Sound notification hooks for Claude Code that play audio alerts when Claude needs attention or completes tasks. Works on macOS, Windows, and Linux without external dependencies.
 
+**🎵 macOS Enhancement**: Now uses built-in system sounds on macOS - no sound files needed!
+
 > **Vision**: This repository aims to become the central hub for awesome Claude Code hooks, featuring a curated collection of community-contributed hooks
 > and eventually a hook manager to easily discover, install, and manage hooks across projects.
 
@@ -19,10 +21,11 @@ Sound notification hooks for Claude Code that play audio alerts when Claude need
 ### Local Installation (Project-Specific)
 
 1. Clone this repository or copy the `.claude` directory to your project
-2. Ensure the sound files are in your project root:
+2. **For Windows/Linux**: Ensure the sound files are in your project root:
    - `on-agent-need-attention.wav`
    - `on-agent-complete.wav`
-3. The hooks will automatically work for this project
+3. **For macOS**: No sound files needed - uses built-in system sounds!
+4. The hooks will automatically work for this project
 
 ### Global Installation (All Projects)
 
@@ -39,9 +42,10 @@ To use these hooks in all your Claude Code projects:
 The global installer will:
 
 - Copy hooks to `~/.claude/hooks/`
-- Copy sound files to `~/.claude/`
+- Copy sound files to `~/.claude/` (Windows/Linux only)
 - Update `~/.claude/settings.json` with hook configurations (preserves existing permissions)
 - Create a logs directory at `~/.claude/logs/`
+- **macOS**: Automatically uses system sounds - no file copying needed!
 
 ## How It Works
 
@@ -49,9 +53,11 @@ The global installer will:
 
 The hooks use native system commands for audio playback:
 
-- **macOS**: `afplay` (pre-installed)
-- **Windows**: PowerShell `Media.SoundPlayer` (built-in)
-- **Linux**: `aplay`, `paplay`, or `play` (usually pre-installed)
+- **macOS**: `afplay` with built-in system sounds
+  - Notification: `/System/Library/Sounds/Funk.aiff`
+  - Completion: `/System/Library/Sounds/Glass.aiff`
+- **Windows**: PowerShell `Media.SoundPlayer` (built-in) with custom WAV files
+- **Linux**: `aplay`, `paplay`, or `play` (usually pre-installed) with custom WAV files
 
 ### TypeScript Execution
 
@@ -146,7 +152,8 @@ echo '{"type":"Notification","data":{}}' | npx tsx .claude/hooks/notification.ts
 
 - **Node.js** (for `npx`) - Required for running TypeScript hooks - must be available in your $PATH
 - **TypeScript execution via `tsx`** - Installed automatically via npx
-- **Sound files**: `on-agent-need-attention.wav` and `on-agent-complete.wav`
+- **Sound files** (Windows/Linux only): `on-agent-need-attention.wav` and `on-agent-complete.wav`
+- **macOS**: No sound files required - uses built-in system sounds
 
 ### Dependencies
 
@@ -206,11 +213,20 @@ Uses built-in PowerShell, no additional software needed.
 
 ### macOS
 
-Uses built-in `afplay`, no additional software needed.
+Uses built-in `afplay` with system sounds, no additional software or sound files needed.
+
+Available system sounds in `/System/Library/Sounds/`:
+- Basso, Blow, Bottle, Frog, Funk, Glass, Hero, Morse, Ping, Pop, Purr, Sosumi, Submarine, Tink
+
+Currently configured:
+- Notifications: `Funk.aiff` (distinctive alert sound)
+- Completions: `Glass.aiff` (pleasant completion chime)
 
 ## Troubleshooting
 
-1. **No sound playing**: Check that sound files exist in the project root
+1. **No sound playing**: 
+   - Windows/Linux: Check that sound files exist in the project root
+   - macOS: Ensure system volume is not muted
 2. **Permission errors**: Ensure hooks have execute permissions
 3. **Linux audio issues**: Try installing one of the supported audio players
 4. **Logs not appearing**: Check file permissions on the logs directory

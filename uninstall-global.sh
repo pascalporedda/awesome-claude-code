@@ -29,9 +29,13 @@ if [ -d "$GLOBAL_HOOKS_DIR" ]; then
     rm -rf "$GLOBAL_HOOKS_DIR"
 fi
 
-# Remove sound files
-echo -e "${YELLOW}Removing sound files...${NC}"
-rm -f "$CLAUDE_CONFIG_DIR"/*.wav
+# Remove sound files (only for non-macOS systems)
+if [[ "$OSTYPE" != "darwin"* ]]; then
+    echo -e "${YELLOW}Removing sound files...${NC}"
+    rm -f "$CLAUDE_CONFIG_DIR"/*.wav
+else
+    echo -e "${GREEN}macOS detected - no sound files to remove (uses built-in system sounds)${NC}"
+fi
 
 # Remove hooks from global settings.json
 GLOBAL_SETTINGS="$CLAUDE_CONFIG_DIR/settings.json"

@@ -96,22 +96,11 @@ process.stdin.on('end', async () => {
       });
     } else {
       // Default behavior: play sound file
-      const soundFile = isGlobalInstall
-        ? join(process.env.HOME || process.cwd(), '.claude', 'on-agent-complete.wav')
-        : join(__dirname, '../../on-agent-complete.wav');
+      let cmd: string;
       
-      // Check if sound file exists
-      if (existsSync(soundFile)) {
-        // Determine the command based on the platform
-        let cmd: string;
-        if (os_platform === 'darwin') {
-          cmd = `afplay "${soundFile}"`;
-        } else if (os_platform === 'win32') {
-          cmd = `powershell -c "(New-Object Media.SoundPlayer '${soundFile}').PlaySync()"`;
-        } else {
-          // Linux - try multiple players
-          cmd = `aplay "${soundFile}" 2>/dev/null || paplay "${soundFile}" 2>/dev/null || play "${soundFile}" 2>/dev/null`;
-        }
+      if (os_platform === 'darwin') {
+        // Use macOS built-in system sound
+        cmd = `afplay /System/Library/Sounds/Glass.aiff`;
         
         exec(cmd, (err) => {
           if (err) {
@@ -120,9 +109,32 @@ process.stdin.on('end', async () => {
           afterNotification();
         });
       } else {
-        console.error(`Sound file not found: ${soundFile}`);
-        console.error('Please ensure on-agent-complete.wav exists in the repository root');
-        afterNotification();
+        // For non-macOS platforms, try to use custom sound file
+        const soundFile = isGlobalInstall
+          ? join(process.env.HOME || process.cwd(), '.claude', 'on-agent-complete.wav')
+          : join(__dirname, '../../on-agent-complete.wav');
+        
+        // Check if sound file exists
+        if (existsSync(soundFile)) {
+          // Determine the command based on the platform
+          if (os_platform === 'win32') {
+            cmd = `powershell -c "(New-Object Media.SoundPlayer '${soundFile}').PlaySync()"`;
+          } else {
+            // Linux - try multiple players
+            cmd = `aplay "${soundFile}" 2>/dev/null || paplay "${soundFile}" 2>/dev/null || play "${soundFile}" 2>/dev/null`;
+          }
+          
+          exec(cmd, (err) => {
+            if (err) {
+              console.error('Error playing sound:', err.message);
+            }
+            afterNotification();
+          });
+        } else {
+          console.error(`Sound file not found: ${soundFile}`);
+          console.error('Please ensure on-agent-complete.wav exists in the repository root');
+          afterNotification();
+        }
       }
     }
   } catch (error) {

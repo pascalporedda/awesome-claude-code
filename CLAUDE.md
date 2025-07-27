@@ -20,21 +20,27 @@ Since this project uses TypeScript hooks with no build step required:
 
 The project contains three TypeScript hooks in `.claude/hooks/`:
 
-1. **notification.ts** - Plays `on-agent-need-attention.wav` when Claude needs user attention
+1. **notification.ts** - Plays notification sound when Claude needs user attention
    - Triggered on Notification events
    - Only plays sound with `--notify` flag
-   - **NEW**: Use `--speak` flag on macOS to use voice synthesis instead (says "Your agent needs attention")
+   - **macOS**: Uses built-in system sound `/System/Library/Sounds/Funk.aiff`
+   - **Windows/Linux**: Requires `on-agent-need-attention.wav` in repository root
+   - **Alternative**: Use `--speak` flag on macOS to use voice synthesis instead (says "Your agent needs attention")
    - Logs events to `logs/notifications.json`
 
-2. **stop.ts** - Plays `on-agent-complete.wav` when Claude completes a task
+2. **stop.ts** - Plays completion sound when Claude completes a task
    - Triggered on Stop events
    - Processes chat transcripts with `--chat` flag
-   - **NEW**: Use `--speak` flag on macOS to use voice synthesis instead (says "Your agent has finished")
+   - **macOS**: Uses built-in system sound `/System/Library/Sounds/Glass.aiff`
+   - **Windows/Linux**: Requires `on-agent-complete.wav` in repository root
+   - **Alternative**: Use `--speak` flag on macOS to use voice synthesis instead (says "Your agent has finished")
    - Logs events to `logs/stop.json` and transcripts to `logs/chat.json`
 
-3. **subagent_stop.ts** - Plays `on-agent-complete.wav` when a subagent completes
+3. **subagent_stop.ts** - Plays completion sound when a subagent completes
    - Triggered on SubagentStop events
-   - **NEW**: Use `--speak` flag on macOS to use voice synthesis instead (says "Your subagent has finished")
+   - **macOS**: Uses built-in system sound `/System/Library/Sounds/Glass.aiff`
+   - **Windows/Linux**: Requires `on-agent-complete.wav` in repository root
+   - **Alternative**: Use `--speak` flag on macOS to use voice synthesis instead (says "Your subagent has finished")
    - Logs events to `logs/subagent_stop.json`
 
 ### Sound Playback
@@ -57,9 +63,13 @@ The `.claude/settings.json` configures:
 
 ### Required Files
 
+**macOS**: No sound files required - uses built-in system sounds
+- Notification: `/System/Library/Sounds/Funk.aiff`
+- Completion: `/System/Library/Sounds/Glass.aiff`
+
+**Windows/Linux**: Custom sound files required in repository root
 - `on-agent-need-attention.wav` - Sound for notifications
 - `on-agent-complete.wav` - Sound for completion events
-- Both files must be in the repository root
 
 ## Future Features
 

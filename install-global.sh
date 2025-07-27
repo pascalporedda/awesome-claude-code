@@ -103,8 +103,17 @@ fi
 echo -e "${GREEN}Copying hooks to global directory...${NC}"
 cp -r .claude/hooks/* "$GLOBAL_HOOKS_DIR/"
 
-echo -e "${GREEN}Copying sound files...${NC}"
-cp *.wav "$CLAUDE_CONFIG_DIR/"
+# Only copy sound files on non-macOS systems
+if [[ "$OSTYPE" != "darwin"* ]]; then
+    echo -e "${GREEN}Copying sound files...${NC}"
+    if ls *.wav 1> /dev/null 2>&1; then
+        cp *.wav "$CLAUDE_CONFIG_DIR/"
+    else
+        echo -e "${YELLOW}Warning: No .wav files found. Make sure on-agent-need-attention.wav and on-agent-complete.wav exist.${NC}"
+    fi
+else
+    echo -e "${GREEN}macOS detected - using built-in system sounds (no files to copy)${NC}"
+fi
 
 GLOBAL_SETTINGS="$CLAUDE_CONFIG_DIR/settings.json"
 
@@ -139,11 +148,19 @@ if [ "$NOTIFICATION_MODE" = "speech" ]; then
     echo "  - Notification hook: Says 'Your agent needs attention' when Claude needs attention"
     echo "  - Stop hook: Says 'Your agent has finished' when Claude completes a task"
     echo "  - SubagentStop hook: Says 'Your subagent has finished' when subagent completes"
-    echo "  - ${YELLOW}Note: Speech notifications are only available on macOS${NC}"
+    echo -e "  - ${YELLOW}Note: Speech notifications are only available on macOS${NC}"
 else
-    echo "  - Notification hook: Plays sound when Claude needs attention"
-    echo "  - Stop hook: Plays sound when Claude completes a task"
-    echo "  - SubagentStop hook: Plays sound when subagent completes"
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        echo "  - Notification hook: Plays Funk.aiff system sound when Claude needs attention"
+        echo "  - Stop hook: Plays Glass.aiff system sound when Claude completes a task"
+        echo "  - SubagentStop hook: Plays Glass.aiff system sound when subagent completes"
+        echo -e "  - ${GREEN} Using macOS built-in system sounds${NC}"
+    else
+        echo "  - Notification hook: Plays sound when Claude needs attention"
+        echo "  - Stop hook: Plays sound when Claude completes a task"
+        echo "  - SubagentStop hook: Plays sound when subagent completes"
+        echo -e "  - ${YELLOW}Note: Custom .wav files required for Windows/Linux${NC}"
+    fi
 fi
 echo
 echo "Hooks will log to: $GLOBAL_LOGS_DIR"
