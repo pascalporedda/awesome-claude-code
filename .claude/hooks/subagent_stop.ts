@@ -57,7 +57,14 @@ process.stdin.on("end", async () => {
     // Check if --speak flag is present and on macOS
     if (process.argv.includes("--speak") && os_platform === "darwin") {
       const message = "Your subagent has finished";
-      const cmd = `say "${message}"`;
+      
+      // Check for --voice flag
+      const voiceIndex = process.argv.indexOf("--voice");
+      const voice = voiceIndex !== -1 && voiceIndex + 1 < process.argv.length 
+        ? process.argv[voiceIndex + 1] 
+        : null;
+      
+      const cmd = voice ? `say -v "${voice}" "${message}"` : `say "${message}"`;
       
       exec(cmd, (err) => {
         if (err) {

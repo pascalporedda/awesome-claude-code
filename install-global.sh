@@ -58,10 +58,15 @@ merge_settings_fallback() {
     local existing_file="$1"
     local output_file="$2"
     local mode="$3"
+    local voice="$4"
     
     # Use dedicated Node.js script
     if [ -n "$mode" ]; then
-        node "$(dirname "$0")/scripts/merge-settings.js" "$existing_file" "$output_file" "$mode"
+        if [ -n "$voice" ]; then
+            node "$(dirname "$0")/scripts/merge-settings.js" "$existing_file" "$output_file" "$mode" "$voice"
+        else
+            node "$(dirname "$0")/scripts/merge-settings.js" "$existing_file" "$output_file" "$mode"
+        fi
     else
         node "$(dirname "$0")/scripts/merge-settings.js" "$existing_file" "$output_file"
     fi
@@ -82,10 +87,30 @@ read -p "Enter your choice (1 or 2): " notification_choice
 if [ "$notification_choice" != "2" ]; then
     notification_choice="1"
     NOTIFICATION_MODE=""
+    VOICE=""
     echo -e "${GREEN}Using sound notifications${NC}"
 else
     NOTIFICATION_MODE="speech"
     echo -e "${GREEN}Using speech notifications${NC}"
+    
+    # Ask for voice preference on macOS
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        echo
+        echo -e "${YELLOW}Available voices (run 'say -v \"?\"' to see full list):${NC}"
+        echo "Common voices: Alex, Samantha, Victoria, Daniel, Fiona, Karen, Moira, Tessa, Veena, Yuna"
+        echo
+        read -p "Enter voice name (leave empty for system default): " voice_input
+        if [ -n "$voice_input" ]; then
+            VOICE="$voice_input"
+            echo -e "${GREEN}Using voice: $VOICE${NC}"
+        else
+            VOICE=""
+            echo -e "${GREEN}Using system default voice${NC}"
+        fi
+    else
+        VOICE=""
+        echo -e "${YELLOW}Voice selection only available on macOS${NC}"
+    fi
 fi
 
 CLAUDE_CONFIG_DIR="$HOME/.claude"
@@ -126,10 +151,10 @@ TEMP_SETTINGS=$(mktemp)
 
 if [ -f "$GLOBAL_SETTINGS" ]; then
     echo -e "${YELLOW}Merging with existing settings...${NC}"
-    merge_settings_fallback "$GLOBAL_SETTINGS" "$TEMP_SETTINGS" "$NOTIFICATION_MODE"
+    merge_settings_fallback "$GLOBAL_SETTINGS" "$TEMP_SETTINGS" "$NOTIFICATION_MODE" "$VOICE"
 else
     echo -e "${YELLOW}Creating new global settings...${NC}"
-    merge_settings_fallback "/dev/null" "$TEMP_SETTINGS" "$NOTIFICATION_MODE"
+    merge_settings_fallback "/dev/null" "$TEMP_SETTINGS" "$NOTIFICATION_MODE" "$VOICE"
 fi
 
 mv "$TEMP_SETTINGS" "$GLOBAL_SETTINGS"
