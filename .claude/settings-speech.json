@@ -28,7 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx tsx .claude/hooks/notification.ts --notify --speak"
+            "command": "npx tsx .claude/hooks/notification.ts --notify --speak --voice Samantha"
           }
         ]
       }
@@ -39,7 +39,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx tsx .claude/hooks/stop.ts --chat --speak"
+            "command": "npx tsx .claude/hooks/stop.ts --chat --speak --voice Samantha"
           }
         ]
       }
@@ -50,7 +50,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx tsx .claude/hooks/subagent_stop.ts --speak"
+            "command": "npx tsx .claude/hooks/subagent_stop.ts --speak --voice Samantha"
           }
         ]
       }
